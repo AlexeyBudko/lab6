@@ -88,3 +88,43 @@ del_timer(&my_timer);
 // Указываем наши функции загрузки и выгрузки
 module_init(test_init);
 module_exit(test_exit);
+
+static int device_open(struct inode *inode, struct file *file)
+{
+    text_ptr = text;
+
+    if ( is_device_open )
+        return -EBUSY;
+
+    is_device_open++;
+
+    return SUCCESS;
+}
+
+static int device_release(struct inode *inode, struct file *file)
+{
+    is_device_open--;
+    return SUCCESS;
+}
+
+static ssize_t device_write(struct file *filp, const char *buff, size_t len, loff_t * off)
+{
+    sscanf(buff, "%d", &tick_time);
+    tick_time *= 1000;
+   mod_timer(&my_timer, jiffies + msecs_to_jiffies(tick_time));
+    return len;
+}
+
+static ssize_t device_read(struct file *filp, char *buffer, size_t length, loff_t * offset)
+{
+    int byte_read = 0;
+    if (*text_ptr == 0 ) {
+        return 0;
+    }
+    while (length && *text_ptr) {
+        put_user(*(text_ptr++), buffer++);
+        length--;
+        byte_read++;
+    }
+    return byte_read;
+}
